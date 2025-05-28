@@ -1,6 +1,7 @@
 'use client';
 
 import { usePortfolio } from '@/context/PortfolioContext';
+import { downloadCSV } from '@/utils/csv';
 import { useState } from 'react';
 
 export default function HistoryPage() {
@@ -12,6 +13,17 @@ export default function HistoryPage() {
   );
 
   const sorted = [...filtered].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  const exportTransactions = () => {
+  const data = transactions.map(t => ({
+    Type: t.type,
+    Symbol: t.symbol,
+    Price: t.price.toFixed(2),
+    Quantity: t.quantity,
+    Timestamp: new Date(t.timestamp).toLocaleString(),
+  }));
+  downloadCSV(data, 'transactions');
+};
 
   return (
     <main className="min-h-screen p-6 bg-gray-100">
@@ -28,6 +40,13 @@ export default function HistoryPage() {
       </div>
 
       <div className="max-w-3xl mx-auto bg-white rounded shadow p-4 overflow-auto">
+        <button
+  onClick={exportTransactions}
+  className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+>
+  ⬇ Export Transactions CSV
+</button>
+
         {transactions.length === 0 ? (
           <p>No transactions yet.</p>
         ) : (

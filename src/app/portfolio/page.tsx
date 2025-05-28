@@ -1,6 +1,7 @@
 'use client';
 
 import { usePortfolio } from '@/context/PortfolioContext';
+import { downloadCSV } from '@/utils/csv';
 import { useEffect, useState } from 'react';
 
 async function fetchQuote(symbol: string): Promise<number> {
@@ -34,6 +35,18 @@ export default function PortfolioPage() {
   }, 0);
 
   const totalValue = totalStocksValue + cash;
+  const exportPortfolio = () => {
+  const data = holdings.map(h => ({
+    Symbol: h.symbol,
+    Quantity: h.quantity,
+    'Avg Price': h.avgPrice.toFixed(2),
+    'Current Price': prices[h.symbol]?.toFixed(2) || '0.00',
+    'Total Value': (h.quantity * (prices[h.symbol] || 0)).toFixed(2),
+  }));
+  data.unshift({ Symbol: 'Cash', Quantity: '', 'Avg Price': '', 'Current Price': '', 'Total Value': cash.toFixed(2) });
+  downloadCSV(data, 'portfolio');
+};
+
 
   return (
     <main className="min-h-screen bg-gray-100 p-6">
@@ -46,9 +59,17 @@ export default function PortfolioPage() {
 
       <div className="max-w-3xl mx-auto bg-white rounded p-4 shadow">
         <h2 className="text-xl font-semibold mb-4">📈 Holdings</h2>
+        <button
+  onClick={exportPortfolio}
+  className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+>
+  ⬇ Export Portfolio CSV
+</button>
+
         {holdings.length === 0 ? (
           <p>No holdings yet.</p>
         ) : (
+          
           <table className="w-full text-left border">
             <thead>
               <tr className="border-b">
