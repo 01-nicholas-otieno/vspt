@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, Activity, DollarSign, ArrowUpRight, ArrowDownRight, Sparkles } from 'lucide-react';
+import BuyForm from './BuyForm';
 
 export default function StockQuote({ symbol }: { symbol: string }) {
   const [data, setData] = useState<any>(null);
@@ -221,7 +222,7 @@ export default function StockQuote({ symbol }: { symbol: string }) {
           </div>
         </div>
       </div>
-
+      <BuyForm symbol={symbol} price={data.c} />
       <style jsx>{`
         @keyframes shimmer {
           0% { transform: translateX(-100%) skewX(-12deg); }
