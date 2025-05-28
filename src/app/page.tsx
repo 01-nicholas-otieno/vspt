@@ -59,10 +59,9 @@ export default function Home() {
               Experience the future of trading with real-time data, stunning visuals, 
               and cutting-edge technology at your fingertips.
             </p>
-            <p className="text-center mb-6">
-              <Link href="/portfolio" className="text-blue-600 underline">
-                View Portfolio
-              </Link>
+            <p className="text-center mb-6 space-x-4">
+              <Link href="/portfolio" className="text-blue-600 underline">View Portfolio</Link>
+              <Link href="/history" className="text-blue-600 underline">Transaction History</Link>
             </p>
           </div>
 
