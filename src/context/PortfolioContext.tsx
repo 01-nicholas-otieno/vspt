@@ -1,13 +1,12 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Holding = {
   symbol: string;
   quantity: number;
   avgPrice: number;
 };
-
 
 type Transaction = {
   type: 'BUY' | 'SELL';
@@ -21,76 +20,120 @@ type PortfolioContextType = {
   cash: number;
   holdings: Holding[];
   transactions: Transaction[];
-  buyStock: (symbol: string, price: number, quantity: number) => boolean;
-  sellStock: (symbol: string, price: number, quantity: number) => boolean;
+  buyStock: (symbol: string, price: number, quantity: number) => Promise<boolean>;
+  sellStock: (symbol: string, price: number, quantity: number) => Promise<boolean>;
 };
 
 const PortfolioContext = createContext<PortfolioContextType | null>(null);
-
-
+const USER_ID = 'demo-user';
 
 export function PortfolioProvider({ children }: { children: ReactNode }) {
   const [cash, setCash] = useState(10000);
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  const buyStock = (symbol: string, price: number, quantity: number): boolean => {
-    const cost = price * quantity;
-    if (cost > cash || quantity <= 0) return false;
+  useEffect(() => {
+    const fetchData = async () => {
+      const [hRes, tRes] = await Promise.all([
+        fetch(`/api/portfolio/${USER_ID}/holdings`),
+        fetch(`/api/portfolio/${USER_ID}/transactions`),
+      ]);
 
-    const existing = holdings.find((h) => h.symbol === symbol);
+      const holdingsFromDB = await hRes.json();
+      const transactionsFromDB = await tRes.json();
 
-    let updatedHoldings;
-    if (existing) {
-      const totalQty = existing.quantity + quantity;
-      const newAvgPrice = ((existing.avgPrice * existing.quantity) + (price * quantity)) / totalQty;
-      updatedHoldings = holdings.map((h) =>
-        h.symbol === symbol ? { ...h, quantity: totalQty, avgPrice: newAvgPrice } : h
+      const totalCost = holdingsFromDB.reduce(
+        (sum: number, h: any) => sum + h.avgPrice * h.quantity,
+        0
       );
+      const defaultCash = 10000;
+      const remainingCash = defaultCash - totalCost;
+
+      setHoldings(holdingsFromDB);
+      setTransactions(transactionsFromDB);
+      setCash(remainingCash);
+    };
+
+    fetchData();
+  }, []);
+
+  const buyStock = async (symbol: string, price: number, quantity: number): Promise<boolean> => {
+    const totalCost = price * quantity;
+    if (quantity <= 0 || cash < totalCost) return false;
+
+    const newHoldings = [...holdings];
+    const existing = newHoldings.find(h => h.symbol === symbol);
+
+    if (existing) {
+      const totalShares = existing.quantity + quantity;
+      existing.avgPrice = (existing.avgPrice * existing.quantity + price * quantity) / totalShares;
+      existing.quantity = totalShares;
     } else {
-      updatedHoldings = [...holdings, { symbol, quantity, avgPrice: price }];
+      newHoldings.push({ symbol, quantity, avgPrice: price });
     }
 
-    setHoldings(updatedHoldings);
-    setCash(cash - cost);
-    setTransactions([
-      ...transactions,
-      {
-        type: 'BUY',
-        symbol,
-        price,
-        quantity,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
+    const newTransaction = {
+      type: 'BUY',
+      symbol,
+      price,
+      quantity,
+      timestamp: new Date().toISOString(),
+      userId: USER_ID,
+    };
+
+    await fetch(`/api/portfolio/${USER_ID}/holdings`, {
+      method: 'POST',
+      body: JSON.stringify(newHoldings),
+    });
+
+    await fetch(`/api/portfolio/${USER_ID}/transactions`, {
+      method: 'POST',
+      body: JSON.stringify([newTransaction]),
+    });
+
+    setHoldings(newHoldings);
+    setCash(cash - totalCost);
+    setTransactions([...transactions, newTransaction]);
 
     return true;
   };
 
-  const sellStock = (symbol: string, price: number, quantity: number): boolean => {
-  const existing = holdings.find((h) => h.symbol === symbol);
-  if (!existing || quantity <= 0 || quantity > existing.quantity) return false;
+  const sellStock = async (symbol: string, price: number, quantity: number): Promise<boolean> => {
+    const existing = holdings.find(h => h.symbol === symbol);
+    if (!existing || quantity <= 0 || existing.quantity < quantity) return false;
 
-  let updatedHoldings = holdings.map((h) =>
-    h.symbol === symbol ? { ...h, quantity: h.quantity - quantity } : h
-  ).filter(h => h.quantity > 0);
+    const totalValue = price * quantity;
+    const newHoldings = holdings.map(h =>
+      h.symbol === symbol
+        ? { ...h, quantity: h.quantity - quantity }
+        : h
+    ).filter(h => h.quantity > 0);
 
-  setHoldings(updatedHoldings);
-  setCash(cash + price * quantity);
-  setTransactions([
-    ...transactions,
-    {
+    const newTransaction = {
       type: 'SELL',
       symbol,
       price,
       quantity,
       timestamp: new Date().toISOString(),
-    },
-  ]);
+      userId: USER_ID,
+    };
 
-  return true;
-};
+    await fetch(`/api/portfolio/${USER_ID}/holdings`, {
+      method: 'POST',
+      body: JSON.stringify(newHoldings),
+    });
 
+    await fetch(`/api/portfolio/${USER_ID}/transactions`, {
+      method: 'POST',
+      body: JSON.stringify([newTransaction]),
+    });
+
+    setHoldings(newHoldings);
+    setCash(cash + totalValue);
+    setTransactions([...transactions, newTransaction]);
+
+    return true;
+  };
 
   return (
     <PortfolioContext.Provider value={{ cash, holdings, transactions, buyStock, sellStock }}>
