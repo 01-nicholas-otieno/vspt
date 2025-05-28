@@ -1,6 +1,5 @@
 'use client';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 type Result = {
   symbol: string;
@@ -10,13 +9,35 @@ type Result = {
 export default function SearchBar({ onSelect }: { onSelect: (symbol: string) => void }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Result[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const search = async () => {
-    if (!query.trim()) return;
-    const res = await fetch(`/api/search?q=${query}`);
-    const data = await res.json();
-    setResults(data.result || []);
+  const search = async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
+      setResults([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+      const data = await res.json();
+      setResults(data.result || []);
+    } catch (error) {
+      console.error('Search error:', error);
+      setResults([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      search(query);
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timeoutId);
+  }, [query]);
 
   return (
     <div className="w-full max-w-xl mx-auto">
@@ -26,8 +47,14 @@ export default function SearchBar({ onSelect }: { onSelect: (symbol: string) => 
         placeholder="Search by company or symbol..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && search()}
       />
+      
+      {isLoading && (
+        <div className="text-center text-gray-500 py-2">
+          Searching...
+        </div>
+      )}
+      
       <ul className="bg-white rounded shadow">
         {results.map((item) => (
           <li
