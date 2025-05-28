@@ -10,7 +10,7 @@ type Holding = {
 
 
 type Transaction = {
-  type: 'BUY';
+  type: 'BUY' | 'SELL';
   symbol: string;
   price: number;
   quantity: number;
@@ -22,9 +22,12 @@ type PortfolioContextType = {
   holdings: Holding[];
   transactions: Transaction[];
   buyStock: (symbol: string, price: number, quantity: number) => boolean;
+  sellStock: (symbol: string, price: number, quantity: number) => boolean;
 };
 
 const PortfolioContext = createContext<PortfolioContextType | null>(null);
+
+
 
 export function PortfolioProvider({ children }: { children: ReactNode }) {
   const [cash, setCash] = useState(10000);
@@ -64,8 +67,33 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+  const sellStock = (symbol: string, price: number, quantity: number): boolean => {
+  const existing = holdings.find((h) => h.symbol === symbol);
+  if (!existing || quantity <= 0 || quantity > existing.quantity) return false;
+
+  let updatedHoldings = holdings.map((h) =>
+    h.symbol === symbol ? { ...h, quantity: h.quantity - quantity } : h
+  ).filter(h => h.quantity > 0);
+
+  setHoldings(updatedHoldings);
+  setCash(cash + price * quantity);
+  setTransactions([
+    ...transactions,
+    {
+      type: 'SELL',
+      symbol,
+      price,
+      quantity,
+      timestamp: new Date().toISOString(),
+    },
+  ]);
+
+  return true;
+};
+
+
   return (
-    <PortfolioContext.Provider value={{ cash, holdings, transactions, buyStock }}>
+    <PortfolioContext.Provider value={{ cash, holdings, transactions, buyStock, sellStock }}>
       {children}
     </PortfolioContext.Provider>
   );

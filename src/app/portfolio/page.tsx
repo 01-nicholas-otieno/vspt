@@ -29,6 +29,23 @@ export default function PortfolioPage() {
     if (holdings.length > 0) fetchPrices();
   }, [holdings]);
 
+
+  const [sellSymbol, setSellSymbol] = useState('');
+const [sellQty, setSellQty] = useState(0);
+const { sellStock } = usePortfolio();
+
+const handleSell = async () => {
+  if (!sellSymbol || sellQty <= 0) return alert("Enter valid symbol and quantity.");
+  const price = await fetchQuote(sellSymbol);
+  const success = sellStock(sellSymbol, price, sellQty);
+  if (!success) return alert("Invalid sell operation.");
+  setSellSymbol('');
+  setSellQty(0);
+  alert(`Sold ${sellQty} of ${sellSymbol} @ $${price.toFixed(2)}`);
+};
+
+
+
   const totalStocksValue = holdings.reduce((total, h) => {
     const currentPrice = prices[h.symbol] || 0;
     return total + h.quantity * currentPrice;
@@ -59,12 +76,32 @@ export default function PortfolioPage() {
 
       <div className="max-w-3xl mx-auto bg-white rounded p-4 shadow">
         <h2 className="text-xl font-semibold mb-4">📈 Holdings</h2>
-        <button
-  onClick={exportPortfolio}
-  className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
->
-  ⬇ Export Portfolio CSV
-</button>
+        <button onClick={exportPortfolio} className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          ⬇ Export Portfolio CSV
+        </button>
+
+        <div className="mb-4 flex flex-wrap gap-2 items-center">
+  <input
+    type="text"
+    placeholder="Symbol (e.g. AAPL)"
+    value={sellSymbol}
+    onChange={(e) => setSellSymbol(e.target.value.toUpperCase())}
+    className="p-2 border rounded w-32"
+  />
+  <input
+    type="number"
+    placeholder="Quantity"
+    value={sellQty}
+    onChange={(e) => setSellQty(Number(e.target.value))}
+    className="p-2 border rounded w-28"
+  />
+  <button
+    onClick={handleSell}
+    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+  >
+    🔻 Sell
+  </button>
+</div>
 
         {holdings.length === 0 ? (
           <p>No holdings yet.</p>
