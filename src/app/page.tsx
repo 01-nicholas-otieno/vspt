@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { TrendingUp, Search, BarChart3, DollarSign, Activity, Sparkles } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import StockQuote from "@/components/StockQuote";
+import Link from "next/link";
 
 
 export default function Home() {
@@ -57,6 +58,11 @@ export default function Home() {
             <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
               Experience the future of trading with real-time data, stunning visuals, 
               and cutting-edge technology at your fingertips.
+            </p>
+            <p className="text-center mb-6">
+              <Link href="/portfolio" className="text-blue-600 underline">
+                View Portfolio
+              </Link>
             </p>
           </div>
 
