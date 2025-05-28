@@ -1,18 +1,20 @@
+import { fetchFromFinnhub } from '@/lib/finnhub';
 import { NextResponse }  from 'next/server';
+
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q');
+  const symbol = searchParams.get('symbol');
 
   if (!query) {
     return NextResponse.json({ error: 'Missing search query' }, { status: 400 });
   }
 
-  const url = `https://finnhub.io/api/v1/search?q=${query}&token=${process.env.FINNHUB_API_KEY}`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-
-  return NextResponse.json(data);
+  try {
+    const data = await fetchFromFinnhub('search', { q: query });
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch from Finnhub' }, { status: 500 });
+  }
 }
-
