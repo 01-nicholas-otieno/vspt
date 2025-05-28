@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Holding {
+  id       String @id @default(cuid())
+  symbol   String
+  quantity Int
+  avgPrice Float
+  userId   String
+  user     User   @relation(name: "UserHoldings", fields: [userId], references: [id])
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  type      String
+  symbol    String
+  price     Float
+  quantity  Int
+  timestamp DateTime
+  userId    String
+  user      User     @relation(name: "UserTransactions", fields: [userId], references: [id])
+}
+
+model User {
+  id           String        @id @default(cuid())
+  cash         Float         @default(10000)
+  holdings     Holding[]     @relation(name: "UserHoldings")
+  transactions Transaction[] @relation(name: "UserTransactions")
+}
